@@ -130,8 +130,7 @@ def load_index() -> VectorStoreIndex | StorageContext:
             api_key=os.environ['QDRANT__API_KEY'],
         )
 
-        client = qdrant_client.QdrantClient(path="./qdrant_db")
-        vector_store = QdrantVectorStore(client=client, collection_name="diem_chatbot4")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot4")
 
         docstore = SimpleDocumentStore()
         nodes = load_from_pickle("./nodes/nodes_metadata_hierarchical_x16x4x1.pkl")
