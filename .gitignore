@@ -1,7 +1,6 @@
 /.venv
 /qdrant_db.zip
 /qdrant_storage
-/requirements.txt
 /__pycache__
 /.env
 /qdrant_db
