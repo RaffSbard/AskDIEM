@@ -18,19 +18,18 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from typing import Any
 import pickle
 import os
-from dotenv import load_dotenv
 
-def load_from_pickle(filepath: str) -> Any:
-    """Carica qualsiasi oggetto Python da un file pickle."""
-    if not os.path.exists(filepath):
-        print(f"File di cache '{filepath}' non trovato.")
-        return []
+# def load_from_pickle(filepath: str) -> Any:
+#     """Carica qualsiasi oggetto Python da un file pickle."""
+#     if not os.path.exists(filepath):
+#         print(f"File di cache '{filepath}' non trovato.")
+#         return []
         
-    print(f"Caricamento oggetti dalla cache '{filepath}'...")
-    with open(filepath, "rb") as f:
-        data = pickle.load(f)
-    print(f"Caricati {len(data)} oggetti.")
-    return data
+#     print(f"Caricamento oggetti dalla cache '{filepath}'...")
+#     with open(filepath, "rb") as f:
+#         data = pickle.load(f)
+#     print(f"Caricati {len(data)} oggetti.")
+#     return data
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -95,10 +94,9 @@ st.set_page_config(
     # initial_sidebar_state="auto"
 )
 
-load_dotenv()
-os.environ['GOOGLE_API_KEY'] = st.secrets["GOOGLE_API_KEY"]
-os.environ['COHERE_API_KEY'] = st.secrets["COHERE_API_KEY"]
-os.environ['QDRANT__API_KEY'] = st.secrets["QDRANT__API_KEY"]
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
+QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
 
 # Imposta la lingua per la data in base alla scelta
 try:
@@ -117,13 +115,14 @@ def load_index() -> VectorStoreIndex | StorageContext:
     with st.spinner(ui_texts["spinner_message"]):
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
+            api_key=GOOGLE_API_KEY,
             temperature=0.5
         )
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
-            api_key=os.environ['QDRANT__API_KEY'],
+            api_key=QDRANT_API_KEY,
         )
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
@@ -183,7 +182,7 @@ if "chat_engine" not in st.session_state:
         memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
-        node_postprocessors=[CohereRerank(api_key=os.environ['COHERE_API_KEY'], top_n=5)],
+        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=5)],
         verbose=True,
     )
 
