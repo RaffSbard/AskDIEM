@@ -118,18 +118,18 @@ def load_index() -> VectorStoreIndex | StorageContext:
             api_key=GOOGLE_API_KEY,
             temperature=0.5
         )
-        print("Modello LLM impostato su Google Gemini 2.5 Flash.")
+        st.write("Modello LLM caricato.")
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
-        print("Modello di embedding impostato su BAAI/bge-m3.")
+        st.write("Modello di embedding caricato.")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
-        print("Client Qdrant inizializzato.")
+        st.write("Client Qdrant inizializzato.")
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
-        print("Vector store Qdrant collegato alla collezione 'diem_chatbot3'.")
+        st.write("Vector store Qdrant caricato.")
 
         # docstore = SimpleDocumentStore()
         # nodes = load_from_pickle("./nodes/nodes_metadata_hierarchical_x16x4x1.pkl")
@@ -138,7 +138,7 @@ def load_index() -> VectorStoreIndex | StorageContext:
         # storage_context = StorageContext.from_defaults(docstore=docstore)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        print("Indice vettoriale caricato da Qdrant.")
+        st.write("Indice vettoriale caricato.")
         return vector_index, storage_context
 
 vector_index, storage_context = load_index()
