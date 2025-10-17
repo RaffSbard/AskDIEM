@@ -138,7 +138,6 @@ def load_index() -> VectorStoreIndex | StorageContext:
         # storage_context = StorageContext.from_defaults(docstore=docstore)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        st.write("Indice vettoriale caricato.")
         return vector_index, storage_context
 
 vector_index, storage_context = load_index()
