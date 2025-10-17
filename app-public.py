@@ -119,21 +119,17 @@ def load_index() -> VectorStoreIndex | StorageContext:
             api_key=GOOGLE_API_KEY,
             temperature=0.5
         )
-        st.write("Modello LLM caricato.")
         Settings.embed_model = GoogleGenAIEmbedding(
             model_name="models/text-embedding-004", 
             api_key=GOOGLE_API_KEY
         )
-        st.write("Modello di embedding caricato.")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
-        st.write("Client Qdrant inizializzato.")
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
-        st.write("Vector store Qdrant caricato.")
 
         # docstore = SimpleDocumentStore()
         # nodes = load_from_pickle("./nodes/nodes_metadata_hierarchical_x16x4x1.pkl")
