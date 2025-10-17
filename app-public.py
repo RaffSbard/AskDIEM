@@ -120,7 +120,7 @@ def load_index() -> VectorStoreIndex | StorageContext:
             temperature=0.5
         )
         st.write("Modello LLM caricato.")
-        Settings.embed_model = GoogleGenerativeAIEmbedding(
+        Settings.embed_model = GoogleGenAIEmbedding(
             model_name="models/text-embedding-004", 
             api_key=GOOGLE_API_KEY
         )
