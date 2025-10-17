@@ -9,6 +9,7 @@ from llama_index.core import (
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.google import GoogleGenerativeAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
@@ -119,7 +120,10 @@ def load_index() -> VectorStoreIndex | StorageContext:
             temperature=0.5
         )
         st.write("Modello LLM caricato.")
-        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
+        Settings.embed_model = GoogleGenerativeAIEmbedding(
+            model_name="models/text-embedding-004", 
+            api_key=GOOGLE_API_KEY
+        )
         st.write("Modello di embedding caricato.")
 
         qdrant_client = QdrantClient(
