@@ -123,12 +123,12 @@ def load_index() -> VectorStoreIndex | StorageContext:
         )
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
-        from qdrant_client import QdrantClient
+        # from qdrant_client import QdrantClient
 
-        qdrant_client = QdrantClient(
-            url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
-            api_key=os.environ['QDRANT__API_KEY'],
-        )
+        # qdrant_client = QdrantClient(
+        #     url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
+        #     api_key=os.environ['QDRANT__API_KEY'],
+        # )
 
         client = qdrant_client.QdrantClient(path="./qdrant_db")
         vector_store = QdrantVectorStore(client=client, collection_name="diem_chatbot4")
