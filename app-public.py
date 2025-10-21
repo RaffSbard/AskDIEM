@@ -7,30 +7,12 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.core.storage.docstore import SimpleDocumentStore
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.retrievers import AutoMergingRetriever
 from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
-from typing import Any
-import pickle
-import os
-
-# def load_from_pickle(filepath: str) -> Any:
-#     """Carica qualsiasi oggetto Python da un file pickle."""
-#     if not os.path.exists(filepath):
-#         print(f"File di cache '{filepath}' non trovato.")
-#         return []
-        
-#     print(f"Caricamento oggetti dalla cache '{filepath}'...")
-#     with open(filepath, "rb") as f:
-#         data = pickle.load(f)
-#     print(f"Caricati {len(data)} oggetti.")
-#     return data
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -111,14 +93,15 @@ except locale.Error as e:
 @st.cache_resource(show_spinner=False)
 def load_index() -> VectorStoreIndex | StorageContext:
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
-    # Nota: i messaggi di caricamento qui non possono essere multilingua
-    # perché la lingua viene scelta dopo l'avvio della funzione.
+
     with st.spinner(ui_texts["spinner_message"]):
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5
         )
+
+        # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
         Settings.embed_model = GoogleGenAIEmbedding(
             model_name="models/text-embedding-004", 
             api_key=GOOGLE_API_KEY
@@ -129,13 +112,8 @@ def load_index() -> VectorStoreIndex | StorageContext:
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot_public")
 
-        # docstore = SimpleDocumentStore()
-        # nodes = load_from_pickle("./nodes/nodes_metadata_hierarchical_x16x4x1.pkl")
-        # docstore.add_documents(nodes)
-
-        # storage_context = StorageContext.from_defaults(docstore=docstore)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
         return vector_index, storage_context
@@ -147,8 +125,6 @@ vector_index, storage_context = load_index()
 st.title(ui_texts["title"])
 st.caption(ui_texts["caption"])
 
-# Il system prompt e il context prompt rimangono in italiano come da tua logica
-# Se vuoi renderli multilingua, dovrai aggiungerli al dizionario TRANSLATIONS
 SYSTEM_PROMPT_TEMPLATE = (
     """Sei un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
 
@@ -181,12 +157,11 @@ if "chat_engine" not in st.session_state:
         """
     )
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
-        retriever=vector_index.as_retriever(similarity_top_k=10),
-        # retriever = AutoMergingRetriever(vector_index.as_retriever(similarity_top_k=10), storage_context),
+        retriever=vector_index.as_retriever(similarity_top_k=15),
         memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
-        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=5)],
+        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=15)],
         verbose=True,
     )
 
@@ -243,7 +218,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
                 else:
                     st.info(ui_texts["no_sources_message"])
     
-    # Aggiungi la risposta E le fonti dell'assistente alla cronologia
+    # Aggiungi la risposta e le fonti dell'assistente alla cronologia
     st.session_state.messages.append({
         "role": "assistant", 
         "content": response.response,

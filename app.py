@@ -6,33 +6,16 @@ from llama_index.core import (
     StorageContext,
     Settings
 )
-from llama_index.core.prompts import PromptTemplate
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.llms.cohere import Cohere
-import qdrant_client
+from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.retrievers import AutoMergingRetriever
 from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
-from typing import Any
-import pickle
+from llama_index.core.postprocessor import SimilarityPostprocessor
 import os
 from dotenv import load_dotenv
-
-def load_from_pickle(filepath: str) -> Any:
-    """Carica qualsiasi oggetto Python da un file pickle."""
-    if not os.path.exists(filepath):
-        print(f"File di cache '{filepath}' non trovato.")
-        return []
-        
-    print(f"Caricamento oggetti dalla cache '{filepath}'...")
-    with open(filepath, "rb") as f:
-        data = pickle.load(f)
-    print(f"Caricati {len(data)} oggetti.")
-    return data
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -114,8 +97,7 @@ except locale.Error as e:
 @st.cache_resource(show_spinner=False)
 def load_index() -> VectorStoreIndex | StorageContext:
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
-    # Nota: i messaggi di caricamento qui non possono essere multilingua
-    # perché la lingua viene scelta dopo l'avvio della funzione.
+
     with st.spinner(ui_texts["spinner_message"]):
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
@@ -123,21 +105,14 @@ def load_index() -> VectorStoreIndex | StorageContext:
         )
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
-        # from qdrant_client import QdrantClient
+        qdrant_client = QdrantClient(
+            url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
+            api_key=os.environ['QDRANT__API_KEY'],
+        )
 
-        # qdrant_client = QdrantClient(
-        #     url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
-        #     api_key=os.environ['QDRANT__API_KEY'],
-        # )
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
 
-        client = qdrant_client.QdrantClient(path="./qdrant_db")
-        vector_store = QdrantVectorStore(client=client, collection_name="diem_chatbot4")
-
-        docstore = SimpleDocumentStore()
-        nodes = load_from_pickle("./nodes/nodes_metadata_hierarchical_x16x4x1.pkl")
-        docstore.add_documents(nodes)
-
-        storage_context = StorageContext.from_defaults(docstore=docstore)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
         return vector_index, storage_context
 
@@ -148,8 +123,6 @@ vector_index, storage_context = load_index()
 st.title(ui_texts["title"])
 st.caption(ui_texts["caption"])
 
-# Il system prompt e il context prompt rimangono in italiano come da tua logica
-# Se vuoi renderli multilingua, dovrai aggiungerli al dizionario TRANSLATIONS
 SYSTEM_PROMPT_TEMPLATE = (
     """Sei un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
 
@@ -182,12 +155,11 @@ if "chat_engine" not in st.session_state:
         """
     )
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
-        # base_retriever=vector_index.as_retriever(similarity_top_k=10),
-        retriever = AutoMergingRetriever(vector_index.as_retriever(similarity_top_k=10), storage_context),
+        retriever=vector_index.as_retriever(similarity_top_k=15),
         memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
-        node_postprocessors=[CohereRerank(api_key=os.environ['COHERE_API_KEY'], top_n=5)],
+        node_postprocessors=[CohereRerank(api_key=os.environ['COHERE_API_KEY'], top_n=15), SimilarityPostprocessor(similarity_cutoff=0.15)],
         verbose=True,
     )
 
