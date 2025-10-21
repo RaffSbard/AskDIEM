@@ -13,6 +13,7 @@ from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
+from llama_index.core.postprocessor import SimilarityPostprocessor
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -161,7 +162,7 @@ if "chat_engine" not in st.session_state:
         memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
-        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=15)],
+        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=15), SimilarityPostprocessor(similarity_cutoff=0.15)],
         verbose=True,
     )
 
