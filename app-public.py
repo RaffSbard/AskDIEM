@@ -225,8 +225,10 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
                         break
 
             if has_relevant_nodes:
+                print("NORMALE")
                 response = chat_engine.chat(prompt)
-            else:                
+            else:        
+                print("FALLBACK")        
                 fallback_engine = st.session_state.fallback_chat_engine
                 
                 fallback_engine.system_prompt = chat_engine.system_prompt
