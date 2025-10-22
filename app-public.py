@@ -217,7 +217,14 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             retriever = vector_index.as_retriever(similarity_top_k=5)
             nodes = retriever.retrieve(prompt)
 
+            has_relevant_nodes = False
             if nodes:
+                for node in nodes:
+                    if node.score > 0.15:
+                        has_relevant_nodes = True
+                        break
+
+            if has_relevant_nodes:
                 response = chat_engine.chat(prompt)
             else:                
                 fallback_engine = st.session_state.fallback_chat_engine
