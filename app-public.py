@@ -220,13 +220,13 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
             if reranked_node and reranked_node[0].score >= 0.15:
                 chat_engine = st.session_state.chat_engine
-                chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+                chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
 
                 response = chat_engine.chat(prompt)
             else:              
                 fallback_engine = st.session_state.fallback_chat_engine
                 
-                fallback_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+                fallback_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
                 
                 llm_response = fallback_engine.chat(prompt)
                 
