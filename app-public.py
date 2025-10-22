@@ -6,12 +6,13 @@ from llama_index.core import (
     StorageContext,
     Settings
 )
+from llama_index.core.base.response.schema import Response
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.chat_engine import CondensePlusContextChatEngine
+from llama_index.core.chat_engine import CondensePlusContextChatEngine, SimpleChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
 
@@ -127,7 +128,7 @@ st.title(ui_texts["title"])
 st.caption(ui_texts["caption"])
 
 SYSTEM_PROMPT_TEMPLATE = (
-    """Sei un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
+    """Sei AskDIEM, un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
 
     Il tuo obiettivo è fornire risposte accurate basandoti esclusivamente sulle informazioni ufficiali che ti vengono fornite.
     Tieni presente che oggi è: {current_date}.
@@ -142,6 +143,9 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 if "chat_engine" not in st.session_state:
     print("Creazione di una nuova istanza del Chat Engine.")
+
+    shared_memory = ChatMemoryBuffer.from_defaults(token_limit=50000)
+
     context_prompt = (
         """Date le seguenti informazioni estratte dai documenti ufficiali e la domanda dell'utente, fornisci una risposta chiara ed esaustiva.
 
@@ -159,11 +163,19 @@ if "chat_engine" not in st.session_state:
     )
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
         retriever=vector_index.as_retriever(similarity_top_k=15),
-        memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
+        memory=shared_memory,
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
-        node_postprocessors=[CohereRerank(api_key=COHERE_API_KEY, top_n=15), SimilarityPostprocessor(similarity_cutoff=0.15)],
+        node_postprocessors=[
+            CohereRerank(api_key=COHERE_API_KEY, top_n=15), 
+            SimilarityPostprocessor(similarity_cutoff=0.15)
+        ],
         verbose=True,
+    )
+
+    st.session_state.fallback_chat_engine = SimpleChatEngine.from_defaults(
+        memory=shared_memory,
+        system_prompt=SYSTEM_PROMPT_TEMPLATE,
     )
 
 if "messages" not in st.session_state or st.session_state.messages is None:
@@ -201,7 +213,24 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             current_date_str = datetime.datetime.now().strftime("%A, %d %B %Y")
             chat_engine = st.session_state.chat_engine
             chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
-            response = chat_engine.chat(prompt)
+
+            retriever = vector_index.as_retriever(similarity_top_k=5)
+            nodes = retriever.retrieve(prompt)
+
+            if nodes:
+                response = chat_engine.chat(prompt)
+            else:                
+                fallback_engine = st.session_state.fallback_chat_engine
+                
+                fallback_engine.system_prompt = chat_engine.system_prompt
+                
+                llm_response = fallback_engine.chat(prompt)
+                
+                response = Response(
+                    response=llm_response.response,
+                    source_nodes=[]
+                )
+
             st.write(response.response)
 
             with st.expander(ui_texts["sources_expander"]):
