@@ -62,11 +62,11 @@ class MainContentExtractorReader(BaseReader):
                 try:
                     # Se il dominio richiede JS, usiamo Selenium
                     driver.get(url)
-                    wait = WebDriverWait(driver, 10) # Aumentato a 10 secondi per sicurezza
+                    wait = WebDriverWait(driver, 10)
                     wait.until(
                         EC.visibility_of_element_located((By.CSS_SELECTOR, "main.app-main-container"))
                     )
-                    #time.sleep(10)  # Attesa fissa per assicurarsi che il contenuto sia caricato
+                    #time.sleep(10) 
                     page_content = driver.page_source
                 except TimeoutException:
                     print(f"Timeout durante l'attesa del contenuto dinamico per {url}")
@@ -75,7 +75,7 @@ class MainContentExtractorReader(BaseReader):
                     print(f"Un altro errore di Selenium è occorso per {url}: {e}")
                     page_content = None
             else:
-                # Altrimenti, usiamo il veloce 'requests'
+                # Altrimenti usiamo 'requests'
                 response = requests.get(url, timeout=10)
                 if response.status_code == 200 and 'text/html' in response.headers.get('Content-Type', ''):
                     page_content = response.content
