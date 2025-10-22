@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 import locale
+from babel.dates import format_datetime
 from llama_index.core import (
     VectorStoreIndex,
     StorageContext,
@@ -210,7 +211,9 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
     with st.chat_message("assistant"):
         with st.spinner(ui_texts["thinking_message"]):
-            current_date_str = datetime.datetime.now().strftime("%A, %d %B %Y")
+            # current_date_str = datetime.datetime.now().strftime("%A, %d %B %Y")
+
+            current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
 
             retriever = vector_index.as_retriever(similarity_top_k=5)
             nodes = retriever.retrieve(prompt)
@@ -226,7 +229,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             else:              
                 fallback_engine = st.session_state.fallback_chat_engine
                 
-                fallback_engine.__dict__.__setattr__("system_prompt", SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str))
+                fallback_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
                 
                 llm_response = fallback_engine.chat(prompt)
                 
