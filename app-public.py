@@ -217,13 +217,12 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             retriever = vector_index.as_retriever(similarity_top_k=5)
             nodes = retriever.retrieve(prompt)
 
+            reranker = CohereRerank(api_key=COHERE_API_KEY, top_n=1)
+            reranked_node = reranker.postprocess_nodes(nodes, query_str=prompt)
+
             has_relevant_nodes = False
-            if nodes:
-                for node in nodes:
-                    st.write(f"Debug: Node score = {node.score}")
-                    if node.score > 0.15:
-                        has_relevant_nodes = True
-                        break
+            if reranked_node and reranked_node[0].score >= 0.15:
+                has_relevant_nodes = True
 
             if has_relevant_nodes:
                 st.write("NORMALE")
