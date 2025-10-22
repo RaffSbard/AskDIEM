@@ -220,6 +220,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             has_relevant_nodes = False
             if nodes:
                 for node in nodes:
+                    st.write(f"Debug: Node score = {node.score}")
                     if node.score > 0.15:
                         has_relevant_nodes = True
                         break
