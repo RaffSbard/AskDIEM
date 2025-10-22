@@ -211,8 +211,6 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
     with st.chat_message("assistant"):
         with st.spinner(ui_texts["thinking_message"]):
             current_date_str = datetime.datetime.now().strftime("%A, %d %B %Y")
-            chat_engine = st.session_state.chat_engine
-            chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
 
             retriever = vector_index.as_retriever(similarity_top_k=5)
             nodes = retriever.retrieve(prompt)
@@ -220,18 +218,15 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             reranker = CohereRerank(api_key=COHERE_API_KEY, top_n=1)
             reranked_node = reranker.postprocess_nodes(nodes, query_str=prompt)
 
-            has_relevant_nodes = False
             if reranked_node and reranked_node[0].score >= 0.15:
-                has_relevant_nodes = True
+                chat_engine = st.session_state.chat_engine
+                chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
 
-            if has_relevant_nodes:
-                st.write("NORMALE")
                 response = chat_engine.chat(prompt)
-            else:        
-                st.write("FALLBACK")        
+            else:              
                 fallback_engine = st.session_state.fallback_chat_engine
                 
-                fallback_engine.system_prompt = chat_engine.system_prompt
+                fallback_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
                 
                 llm_response = fallback_engine.chat(prompt)
                 
