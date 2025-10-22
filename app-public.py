@@ -226,7 +226,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             else:              
                 fallback_engine = st.session_state.fallback_chat_engine
                 
-                fallback_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+                fallback_engine.__dict__.__setattr__("system_prompt", SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str))
                 
                 llm_response = fallback_engine.chat(prompt)
                 
