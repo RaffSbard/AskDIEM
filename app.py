@@ -1,17 +1,18 @@
 import streamlit as st
 import datetime
-import locale
+from babel.dates import format_datetime
 from llama_index.core import (
     VectorStoreIndex,
     StorageContext,
     Settings
 )
+from llama_index.core.base.response.schema import Response
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.chat_engine import CondensePlusContextChatEngine
+from llama_index.core.chat_engine import CondensePlusContextChatEngine, SimpleChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
 import os
@@ -77,7 +78,6 @@ st.set_page_config(
     page_title=ui_texts["page_title"],
     page_icon="./askdiem.png",
     layout="centered",
-    # initial_sidebar_state="auto"
 )
 
 load_dotenv()
@@ -85,17 +85,8 @@ os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 os.environ['COHERE_API_KEY'] = os.getenv("COHERE_API_KEY")
 os.environ['QDRANT__API_KEY'] = os.getenv("QDRANT__API_KEY")
 
-# Imposta la lingua per la data in base alla scelta
-try:
-    if st.session_state.language == "Italiano":
-        locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
-    # else:
-    #     locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
-except locale.Error as e:
-    print(f"Errore nell'impostare il locale: {e}")
-
 @st.cache_resource(show_spinner=False)
-def load_index() -> VectorStoreIndex | StorageContext:
+def load_index():
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
 
     with st.spinner(ui_texts["spinner_message"]):
@@ -124,7 +115,7 @@ st.title(ui_texts["title"])
 st.caption(ui_texts["caption"])
 
 SYSTEM_PROMPT_TEMPLATE = (
-    """Sei un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
+    """Sei AskDIEM, un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
 
     Il tuo obiettivo è fornire risposte accurate basandoti esclusivamente sulle informazioni ufficiali che ti vengono fornite.
     Tieni presente che oggi è: {current_date}.
@@ -139,6 +130,9 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 if "chat_engine" not in st.session_state:
     print("Creazione di una nuova istanza del Chat Engine.")
+
+    shared_memory = ChatMemoryBuffer.from_defaults(token_limit=50000)
+
     context_prompt = (
         """Date le seguenti informazioni estratte dai documenti ufficiali e la domanda dell'utente, fornisci una risposta chiara ed esaustiva.
 
@@ -156,11 +150,16 @@ if "chat_engine" not in st.session_state:
     )
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
         retriever=vector_index.as_retriever(similarity_top_k=15),
-        memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
+        memory=shared_memory,
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
         node_postprocessors=[CohereRerank(api_key=os.environ['COHERE_API_KEY'], top_n=15), SimilarityPostprocessor(similarity_cutoff=0.15)],
         verbose=True,
+    )
+
+    st.session_state.fallback_chat_engine = SimpleChatEngine.from_defaults(
+        memory=shared_memory,
+        system_prompt=SYSTEM_PROMPT_TEMPLATE,
     )
 
 if "messages" not in st.session_state or st.session_state.messages is None:
@@ -176,17 +175,22 @@ for message in st.session_state.messages:
         # Se il messaggio è dell'assistente E contiene fonti, mostrale
         if message["role"] == "assistant" and "sources" in message and message["sources"]:
             with st.expander(ui_texts["sources_expander"]):
-                for i, node in enumerate(message["sources"]):
-                    # Costruisce il titolo dell'expander usando i testi tradotti
-                    expander_title = (
-                        f"{ui_texts['source_label']} {i+1} "
-                        f"({ui_texts['relevance_score_label']}: {node.score:.2f})"
-                    )
-                    with st.expander(expander_title):
-                        source_info = node.metadata.get('source_url') or node.metadata.get('file_name')
-                        if source_info:
-                            st.caption(f"Da: {source_info}")
-                        st.info(node.text)
+                
+                all_urls = []
+                for node in message["sources"]:
+                    source_info = node.metadata.get("source_url") or node.metadata.get("file_name")
+                    if source_info:
+                        all_urls.append(source_info)
+                
+                # Ottieni una lista di URL unici mantenendo l'ordine
+                unique_urls = list(dict.fromkeys(all_urls))
+                
+                if not unique_urls:
+                    st.info(ui_texts["no_sources_message"])
+                else:
+                    # Elenca ogni URL unico
+                    for url in unique_urls:
+                        st.markdown(f"- {url}")
 
 if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -195,24 +199,39 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
     with st.chat_message("assistant"):
         with st.spinner(ui_texts["thinking_message"]):
-            current_date_str = datetime.datetime.now().strftime("%A, %d %B %Y")
+            current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
             chat_engine = st.session_state.chat_engine
-            chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+            chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
             response = chat_engine.chat(prompt)
+
+            if len(response.source_nodes) == 0:
+                fallback_engine = st.session_state.fallback_chat_engine
+                fallback_engine._system_prompt = chat_engine._system_prompt
+                llm_response = fallback_engine.chat(prompt)
+                response = Response(
+                    response=llm_response.response,
+                    source_nodes=[]
+                )
+
             st.write(response.response)
 
             with st.expander(ui_texts["sources_expander"]):
                 if response.source_nodes:
-                    for i, node in enumerate(response.source_nodes):
-                        expander_title = (
-                            f"{ui_texts['source_label']} {i+1} "
-                            f"({ui_texts['relevance_score_label']}: {node.score:.2f})"
-                        )
-                        with st.expander(expander_title):
-                            source_info = node.metadata.get('source_url') or node.metadata.get('file_name')
-                            if source_info:
-                                st.caption(f"Da: {source_info}")
-                            st.info(node.text)
+                    all_urls = []
+                    for node in response.source_nodes:
+                        source_info = node.metadata.get("source_url") or node.metadata.get("file_name")
+                        if source_info:
+                            all_urls.append(source_info)
+                    
+                    # Ottieni una lista di URL unici mantenendo l'ordine
+                    unique_urls = list(dict.fromkeys(all_urls))
+                    
+                    if not unique_urls:
+                        st.info(ui_texts["no_sources_message"])
+                    else:
+                        # Elenca ogni URL unico
+                        for url in unique_urls:
+                            st.markdown(f"- {url}")
                 else:
                     st.info(ui_texts["no_sources_message"])
     
