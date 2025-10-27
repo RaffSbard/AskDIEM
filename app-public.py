@@ -8,6 +8,7 @@ from llama_index.core import (
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
@@ -135,11 +136,13 @@ def load_index():
             safety_settings=safety_settings,
         )
 
+        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
+
         # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
-        Settings.embed_model = GoogleGenAIEmbedding(
-            model_name="gemini-embedding-001", 
-            api_key=GOOGLE_API_KEY
-        )
+        # Settings.embed_model = GoogleGenAIEmbedding(
+        #     model_name="gemini-embedding-001", 
+        #     api_key=GOOGLE_API_KEY
+        # )
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
