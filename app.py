@@ -52,14 +52,6 @@ class KeepAtLeastOneNodePostprocessor(BaseNodePostprocessor):
         
         return processed_nodes
 
-# Imposta i filtri al livello più basso (BLOCK_NONE)
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
-
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
     "Italiano": {
@@ -127,6 +119,14 @@ os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 os.environ['COHERE_API_KEY'] = os.getenv("COHERE_API_KEY")
 os.environ['QDRANT__API_KEY'] = os.getenv("QDRANT__API_KEY")
 
+# Imposta i filtri al livello più basso (BLOCK_NONE)
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
+
 @st.cache_resource(show_spinner=False)
 def load_index():
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
@@ -137,12 +137,7 @@ def load_index():
             temperature=0.5,
             safety_settings=safety_settings,
         )
-        # Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
-
-        Settings.embed_model = GoogleGenAIEmbedding(
-            model_name="gemini-embedding-001", 
-            api_key=os.environ['GOOGLE_API_KEY']
-        )
+        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
