@@ -16,6 +16,7 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
 import os
 from dotenv import load_dotenv
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from typing import List
@@ -49,6 +50,14 @@ class KeepAtLeastOneNodePostprocessor(BaseNodePostprocessor):
             return [best_node]
         
         return processed_nodes
+
+# Imposta i filtri al livello più basso (BLOCK_NONE)
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -124,7 +133,8 @@ def load_index():
     with st.spinner(ui_texts["spinner_message"]):
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
-            temperature=0.5
+            temperature=0.5,
+            safety_settings=safety_settings,
         )
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
