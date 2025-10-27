@@ -164,7 +164,6 @@ SYSTEM_PROMPT_TEMPLATE = (
 )
 
 if "chat_engine" not in st.session_state:
-    print("Creazione di una nuova istanza del Chat Engine.")
 
     shared_memory = ChatMemoryBuffer.from_defaults(token_limit=50000)
 
