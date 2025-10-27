@@ -7,7 +7,7 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+# from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
