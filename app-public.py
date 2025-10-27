@@ -15,7 +15,7 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+# from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from typing import List
@@ -117,12 +117,12 @@ COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
 QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
 
 # Imposta i filtri al livello più basso (BLOCK_NONE)
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
+# safety_settings = {
+#     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+#     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+#     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+#     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+# }
 
 @st.cache_resource(show_spinner=False)
 def load_index():
@@ -133,7 +133,7 @@ def load_index():
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5,
-            safety_settings=safety_settings,
+            # safety_settings=safety_settings,
         )
 
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
