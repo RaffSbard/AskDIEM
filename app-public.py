@@ -6,15 +6,47 @@ from llama_index.core import (
     StorageContext,
     Settings
 )
-from llama_index.core.base.response.schema import Response
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.chat_engine import CondensePlusContextChatEngine, SimpleChatEngine
+from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
+
+from llama_index.core.postprocessor.types import BaseNodePostprocessor
+from typing import List
+
+# --- CLASSE POST-PROCESSOR PERSONALIZZATA ---
+class KeepAtLeastOneNodePostprocessor(BaseNodePostprocessor):
+    """
+    Un post-processore personalizzato che "avvolge" altri post-processori 
+    per garantire che, se il retriever aveva originariamente trovato dei nodi,
+    almeno uno venga sempre restituito per evitare che il ChatEngine fallisca.
+    """
+    postprocessors: List[BaseNodePostprocessor]
+
+    def _postprocess_nodes(self, nodes, query_str):
+        """
+        Applica la logica di post-processing.
+        """
+        if not nodes:
+            # Se il retriever non ha trovato nulla, restituisce una lista vuota.
+            return []
+        
+        # Salviamo un riferimento al nodo migliore prima di applicare i filtri.
+        best_node = nodes[0] 
+        
+        # Applica tutti i post-processori "avvolti"
+        processed_nodes = nodes
+        for pp in self.postprocessors:
+            processed_nodes = pp.postprocess_nodes(processed_nodes, query_str=query_str)
+        
+        if not processed_nodes:
+            return [best_node]
+        
+        return processed_nodes
 
 # --- 0. DIZIONARIO PER LE TRADUZIONI ---
 TRANSLATIONS = {
@@ -95,7 +127,7 @@ def load_index():
 
         # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
         Settings.embed_model = GoogleGenAIEmbedding(
-            model_name="models/text-embedding-004", 
+            model_name="gemini-embedding-001", 
             api_key=GOOGLE_API_KEY
         )
 
@@ -104,7 +136,7 @@ def load_index():
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot_public")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot_final")
 
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
@@ -124,7 +156,7 @@ SYSTEM_PROMPT_TEMPLATE = (
     Tieni presente che oggi è: {current_date}.
 
     REGOLE GENERALI:
-    - Rispondi nella lingua in cui ti viene posta la domanda, con un tono formale, chiaro e professionale.
+    - *IMPORTANTE*: Se la domanda ti viene posta in inglese rispondi in inglese, a prescindere dalla lingua dei messaggi precedenti o da quella del contesto fornito.
     - A meno che nella domanda non venga specificato un anno o una data in particolare, rispondi sempre tenendo presente la data di oggi.
     - Se nomini un evento, adegua i tempi verbali in base alla data attuale.
     - Se non disponi delle informazioni necessarie per rispondere a una domanda, dichiara chiaramente: "Non dispongo delle informazioni necessarie per rispondere a questa domanda."
@@ -144,13 +176,29 @@ if "chat_engine" not in st.session_state:
 
         Istruzioni per la risposta:
         - Basa la tua risposta esclusivamente sul contesto fornito.
-        - Se nel contesto è presente un link a una risorsa rilevante (come un PDF di un bando, una graduatoria o una pagina web), citalo esplicitamente alla fine della tua risposta.
-        - Non includere link che non siano presenti nel contesto.
+        
+        - ISTRUZIONE PER I LINK: Se nel contesto è presente una risorsa rilevante (come un PDF di un bando, una graduatoria o una pagina web) che supporta la tua risposta, devi citarla usando il formato Markdown: [Titolo Significativo](URL).
+        - Il "Titolo Significativo" dovrebbe essere il titolo del documento (es. 'Bando Collaborazioni studentesche 2024') che trovi nel contesto.
+        - L' "URL" è l'indirizzo web (source_url) associato a quel titolo.
+        
+        - Esempio di formato CORRETTO:
+        Per maggiori dettagli, puoi consultare il [Bando per Collaborazioni Studentesche](https://www.unisa.it/bando-collaborazioni-...).
+        
+        - Esempio di formato ERRATO (da non usare):
+        Per maggiori dettagli, puoi consultare https://www.unisa.it/bando-collaborazioni-...
+        
+        - Non includere link o titoli che non siano esplicitamente presenti nel contesto.
 
         Domanda: {query_str}
         Risposta:
         """
     )
+
+    # Definiamo i post-processori che vogliamo filtrare
+    filtering_postprocessors = [
+        SimilarityPostprocessor(similarity_cutoff=0.15)
+    ]
+
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
         retriever=vector_index.as_retriever(similarity_top_k=15),
         memory=shared_memory,
@@ -158,14 +206,9 @@ if "chat_engine" not in st.session_state:
         context_prompt=context_prompt,
         node_postprocessors=[
             CohereRerank(api_key=COHERE_API_KEY, top_n=15), 
-            SimilarityPostprocessor(similarity_cutoff=0.15)
+            KeepAtLeastOneNodePostprocessor(postprocessors=filtering_postprocessors)
         ],
         verbose=True,
-    )
-
-    st.session_state.fallback_chat_engine = SimpleChatEngine.from_defaults(
-        memory=shared_memory,
-        system_prompt=SYSTEM_PROMPT_TEMPLATE,
     )
 
 if "messages" not in st.session_state or st.session_state.messages is None:
@@ -178,7 +221,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-        # Se il messaggio è dell'assistente E contiene fonti, mostrale
+        # Se il messaggio è dell'assistente e contiene fonti, mostrale
         if message["role"] == "assistant" and "sources" in message and message["sources"]:
             with st.expander(ui_texts["sources_expander"]):
                 
@@ -204,48 +247,59 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
         st.write(prompt)
 
     with st.chat_message("assistant"):
+
+        streaming_response = None
+
         with st.spinner(ui_texts["thinking_message"]):
 
+            # Formatta la data
             current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
 
             chat_engine = st.session_state.chat_engine
-            chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
-            response = chat_engine.chat(prompt)
+            # Aggiorna il system prompt del motore RAG con la data corrente
+            chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+            
+            # Avvia lo stream
+            streaming_response = chat_engine.stream_chat(prompt)
 
-            if len(response.source_nodes) == 0:
-                fallback_engine = st.session_state.fallback_chat_engine
-                fallback_engine._system_prompt = chat_engine._system_prompt
-                llm_response = fallback_engine.chat(prompt)
-                response = Response(
-                    response=llm_response.response,
-                    source_nodes=[]
-                )
 
-            st.write(response.response)
+        # Scrivi lo stream sul frontend e cattura la risposta completa
+        final_response_text = st.write_stream(streaming_response.response_gen)
 
-            with st.expander(ui_texts["sources_expander"]):
-                if response.source_nodes:
-                    all_urls = []
-                    for node in response.source_nodes:
-                        source_info = node.metadata.get("source_url") or node.metadata.get("file_name")
-                        if source_info:
-                            all_urls.append(source_info)
-                    
-                    # Ottieni una lista di URL unici mantenendo l'ordine
-                    unique_urls = list(dict.fromkeys(all_urls))
-                    
-                    if not unique_urls:
-                        st.info(ui_texts["no_sources_message"])
-                    else:
-                        # Elenca ogni URL unico
-                        for url in unique_urls:
-                            st.markdown(f"- {url}")
-                else:
+        source_nodes_for_display = streaming_response.source_nodes
+
+        # Mostra le fonti
+        with st.expander(ui_texts["sources_expander"]):
+            
+            is_conversational = False
+            if len(source_nodes_for_display) == 1:
+                if source_nodes_for_display[0].score < 0.15: 
+                     is_conversational = True
+            
+            if not source_nodes_for_display or is_conversational:
+                st.info(ui_texts["no_sources_message"])
+            else:
+                all_urls = []
+                for node in source_nodes_for_display:
+                    source_info = node.metadata.get("source_url") or node.metadata.get("file_name")
+                    if source_info:
+                        all_urls.append(source_info)
+                
+                unique_urls = list(dict.fromkeys(all_urls))
+                
+                if not unique_urls:
                     st.info(ui_texts["no_sources_message"])
+                else:
+                    for url in unique_urls:
+                        st.markdown(f"- {url}")
+    
+    nodes_to_save = []
+    if not is_conversational:
+        nodes_to_save = source_nodes_for_display
     
     # Aggiungi la risposta e le fonti dell'assistente alla cronologia
     st.session_state.messages.append({
         "role": "assistant", 
-        "content": response.response,
-        "sources": response.source_nodes
+        "content": final_response_text,
+        "sources": nodes_to_save
     })
