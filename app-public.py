@@ -256,7 +256,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
             chat_engine = st.session_state.chat_engine
             # Aggiorna il system prompt del motore RAG con la data corrente
-            chat_engine.system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+            chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
             
             # Avvia lo stream
             streaming_response = chat_engine.stream_chat(prompt)
