@@ -7,15 +7,14 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-# from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
-# from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from typing import List
@@ -117,12 +116,12 @@ COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
 QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
 
 # Imposta i filtri al livello più basso (BLOCK_NONE)
-# safety_settings = {
-#     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-#     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-#     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-#     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-# }
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
 
 @st.cache_resource(show_spinner=False)
 def load_index():
@@ -133,23 +132,21 @@ def load_index():
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5,
-            # safety_settings=safety_settings,
+            safety_settings=safety_settings,
         )
 
-        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
-
         # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
-        # Settings.embed_model = GoogleGenAIEmbedding(
-        #     model_name="gemini-embedding-001", 
-        #     api_key=GOOGLE_API_KEY
-        # )
+        Settings.embed_model = GoogleGenAIEmbedding(
+            model_name="gemini-embedding-001", 
+            api_key=GOOGLE_API_KEY
+        )
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot_final")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
 
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
