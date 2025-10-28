@@ -7,7 +7,7 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+# from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
@@ -114,6 +114,7 @@ st.set_page_config(
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
 QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
+HF_TOKEN = st.secrets["HUGGINGFACE_API_KEY"]
 
 # Imposta i filtri al livello più basso (BLOCK_NONE)
 safety_settings = {
@@ -146,7 +147,8 @@ def load_index():
         # Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
 
         Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
-            model_name="BAAI/bge-m3"
+            model_name="BAAI/bge-m3",
+            token=HF_TOKEN,
         )
 
         qdrant_client = QdrantClient(
