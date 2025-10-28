@@ -7,8 +7,7 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
@@ -118,6 +117,7 @@ load_dotenv()
 os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 os.environ['COHERE_API_KEY'] = os.getenv("COHERE_API_KEY")
 os.environ['QDRANT__API_KEY'] = os.getenv("QDRANT__API_KEY")
+os.environ['HF_TOKEN'] = os.getenv("HUGGINGFACE_API_KEY")
 
 # Imposta i filtri al livello più basso (BLOCK_NONE)
 safety_settings = {
@@ -138,12 +138,9 @@ def load_index():
             safety_settings=safety_settings,
         )
 
-        from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
-
-        # Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
-
         Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
-            model_name="BAAI/bge-m3"
+            model_name="BAAI/bge-m3",
+            token=os.environ['HF_TOKEN'],
         )
 
         qdrant_client = QdrantClient(
@@ -153,11 +150,11 @@ def load_index():
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
 
-        storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        return vector_index, storage_context
 
-vector_index, storage_context = load_index()
+        return vector_index
+
+vector_index = load_index()
 
 # --- 2. GESTIONE DELLA CHAT ---
 
@@ -180,8 +177,6 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 if "chat_engine" not in st.session_state:
     print("Creazione di una nuova istanza del Chat Engine.")
-
-    shared_memory = ChatMemoryBuffer.from_defaults(token_limit=50000)
 
     context_prompt = (
         """Date le seguenti informazioni estratte dai documenti ufficiali e la domanda dell'utente, fornisci una risposta chiara ed esaustiva.
@@ -217,7 +212,7 @@ if "chat_engine" not in st.session_state:
     
     st.session_state.chat_engine = CondensePlusContextChatEngine.from_defaults(
         retriever=vector_index.as_retriever(similarity_top_k=15),
-        memory=shared_memory,
+        memory=ChatMemoryBuffer.from_defaults(token_limit=50000),
         system_prompt=SYSTEM_PROMPT_TEMPLATE,
         context_prompt=context_prompt,
         node_postprocessors=[
