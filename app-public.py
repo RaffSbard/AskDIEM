@@ -135,10 +135,18 @@ def load_index():
             safety_settings=safety_settings,
         )
 
-        # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
-        Settings.embed_model = GoogleGenAIEmbedding(
-            model_name="gemini-embedding-001", 
-            api_key=GOOGLE_API_KEY
+        # # Alternativa a bge-m3 poichè troppo pesante per esser caricato in cloud
+        # Settings.embed_model = GoogleGenAIEmbedding(
+        #     model_name="gemini-embedding-001", 
+        #     api_key=GOOGLE_API_KEY
+        # )
+
+        from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
+
+        # Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
+
+        Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
+            model_name="BAAI/bge-m3"
         )
 
         qdrant_client = QdrantClient(
@@ -146,7 +154,7 @@ def load_index():
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot_final")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
 
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)

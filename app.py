@@ -137,7 +137,14 @@ def load_index():
             temperature=0.5,
             safety_settings=safety_settings,
         )
-        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
+
+        from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
+
+        # Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
+
+        Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
+            model_name="BAAI/bge-m3"
+        )
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
