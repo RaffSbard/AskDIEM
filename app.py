@@ -3,7 +3,6 @@ import datetime
 from babel.dates import format_datetime
 from llama_index.core import (
     VectorStoreIndex,
-    StorageContext,
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore

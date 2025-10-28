@@ -1,9 +1,9 @@
 import streamlit as st
 import datetime
+import nest_asyncio
 from babel.dates import format_datetime
 from llama_index.core import (
     VectorStoreIndex,
-    StorageContext,
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
@@ -18,6 +18,8 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from typing import List
+
+nest_asyncio.apply()
 
 # --- CLASSE POST-PROCESSOR PERSONALIZZATA ---
 class KeepAtLeastOneNodePostprocessor(BaseNodePostprocessor):
