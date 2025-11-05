@@ -148,7 +148,7 @@ def load_index():
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 

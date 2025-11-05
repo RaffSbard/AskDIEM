@@ -133,6 +133,7 @@ def load_index():
     with st.spinner(ui_texts["spinner_message"]):
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
+            api_key=os.environ['GOOGLE_API_KEY'],
             temperature=0.5,
             safety_settings=safety_settings,
         )
@@ -147,7 +148,7 @@ def load_index():
             api_key=os.environ['QDRANT__API_KEY'],
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
