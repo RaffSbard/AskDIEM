@@ -274,7 +274,10 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
         # Scrivi lo stream sul frontend e cattura la risposta completa
         final_response_text = st.write_stream(streaming_response.response_gen)
+        if final_response_text is None:
+            final_response_text = "NIENTEEE"
         print("Final response text:", final_response_text)
+        st.write(final_response_text)
 
         source_nodes_for_display = streaming_response.source_nodes
 
