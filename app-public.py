@@ -276,7 +276,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
         # Scrivi lo stream sul frontend e cattura la risposta completa
         # final_response_text = st.write_stream(streaming_response.response_gen)
         
-        source_nodes_for_display = streaming_response.source_nodes
+        source_nodes_for_display = response.source_nodes
 
         # Mostra le fonti
         with st.expander(ui_texts["sources_expander"]):
