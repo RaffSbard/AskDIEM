@@ -113,32 +113,6 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- INIZIO BLOCCO DEBUG SECRETS ---
-print("Inizio debug delle chiavi API...")
-st.subheader("🐞 Debug Status Chiavi API")
-st.write("Controllo i segreti caricati da st.secrets...")
-try:
-    st.success(f"GOOGLE_API_KEY: Caricata correttamente")
-    st.success(f"COHERE_API_KEY: Caricata correttamente")
-    st.success(f"QDRANT__API_KEY (doppio underscore): Caricata correttamente")
-    st.success(f"HUGGINGFACE_API_KEY: Caricata correttamente")
-    
-    # Prova a forzare il caricamento
-    _ = st.secrets["GOOGLE_API_KEY"]
-    _ = st.secrets["COHERE_API_KEY"]
-    _ = st.secrets["QDRANT__API_KEY"]
-    _ = st.secrets["HUGGINGFACE_API_KEY"]
-    st.info("Tutte le chiavi sembrano accessibili.")
-
-except KeyError as e:
-    # Se una chiave manca, QUESTO errore apparirà
-    st.error(f"ERRORE CHIAVE MANCANTE: Impossibile trovare la chiave {e} nei secrets di Streamlit!")
-    st.error("Controlla il pannello 'Settings' della tua app su Streamlit Cloud. I nomi devono corrispondere perfettamente.")
-except Exception as e:
-    st.error(f"Errore sconosciuto nel caricamento dei secrets: {e}")
-st.divider()
-# --- FINE BLOCCO DEBUG SECRETS ---
-
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
 QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
@@ -157,32 +131,26 @@ def load_index():
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
 
     with st.spinner(ui_texts["spinner_message"]):
-        st.write("Inizializzo i modelli e il database vettoriale...")
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5,
             safety_settings=safety_settings,
         )
-        st.write("Google Gemini LLM inizializzato.")
 
         Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
             model_name="BAAI/bge-m3",
             token=HF_TOKEN,
         )
-        st.write("Modello di embedding HuggingFace inizializzato.")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
-        st.write("Qdrant client inizializzato.")
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
-        st.write("Qdrant Vector Store inizializzato.")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        st.write("Indice del Vector Store caricato.")
 
         return vector_index
 
@@ -292,27 +260,22 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
         streaming_response = None
 
-        try:
-            # Tenta di eseguire il chat engine
-            with st.spinner(ui_texts["thinking_message"]):
-                current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
-                chat_engine = st.session_state.chat_engine
-                chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
-                
-                streaming_response = chat_engine.stream_chat(prompt)
+        with st.spinner(ui_texts["thinking_message"]):
 
-            # Scrivi lo stream
-            final_response_text = st.write_stream(streaming_response.response_gen)
-            source_nodes_for_display = streaming_response.source_nodes
+            # Formatta la data
+            current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
 
-        except Exception as e:
-            # --- ECCO IL DEBUG ---
-            # Se una qualsiasi delle chiamate API fallisce (Google, Cohere, Qdrant, HF)
-            # l'errore verrà stampato qui invece di dare una risposta vuota.
-            st.error(f"Si è verificato un errore API nascosto:\n\n{e}")
-            final_response_text = "Oops, qualcosa è andato storto."
-            source_nodes_for_display = []
-        # --- FINE BLOCCO DEBUG ---
+            chat_engine = st.session_state.chat_engine
+            # Aggiorna il system prompt del motore RAG con la data corrente
+            chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+            
+            # Avvia lo stream
+            streaming_response = chat_engine.stream_chat(prompt)
+
+
+        # Scrivi lo stream sul frontend e cattura la risposta completa
+        final_response_text = st.write_stream(streaming_response.response_gen)
+        source_nodes_for_display = streaming_response.source_nodes
 
         # Mostra le fonti
         with st.expander(ui_texts["sources_expander"]):
