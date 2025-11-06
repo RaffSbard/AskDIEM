@@ -270,11 +270,12 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
             
             # Avvia lo stream
-            streaming_response = chat_engine.stream_chat(prompt)
-
+            response = chat_engine.chat(prompt)
+            st.write_stream(response.response)
 
         # Scrivi lo stream sul frontend e cattura la risposta completa
-        final_response_text = st.write_stream(streaming_response.response_gen)
+        # final_response_text = st.write_stream(streaming_response.response_gen)
+        
         source_nodes_for_display = streaming_response.source_nodes
 
         # Mostra le fonti
@@ -309,6 +310,6 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
     # Aggiungi la risposta e le fonti dell'assistente alla cronologia
     st.session_state.messages.append({
         "role": "assistant", 
-        "content": final_response_text,
+        "content": response.response,
         "sources": nodes_to_save
     })
