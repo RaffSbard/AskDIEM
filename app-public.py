@@ -311,6 +311,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             # l'errore verrà stampato qui invece di dare una risposta vuota.
             st.error(f"Si è verificato un errore API nascosto:\n\n{e}")
             final_response_text = "Oops, qualcosa è andato storto."
+            source_nodes_for_display = []
         # --- FINE BLOCCO DEBUG ---
 
         # Mostra le fonti
