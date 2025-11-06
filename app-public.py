@@ -19,7 +19,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from typing import List
 
-# nest_asyncio.apply()
+nest_asyncio.apply()
 
 # --- CLASSE POST-PROCESSOR PERSONALIZZATA ---
 class KeepAtLeastOneNodePostprocessor(BaseNodePostprocessor):
