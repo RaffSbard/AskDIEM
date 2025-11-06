@@ -157,32 +157,32 @@ def load_index():
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
 
     with st.spinner(ui_texts["spinner_message"]):
-        print("Inizializzazione del GoogleGenAI LLM...")
+        st.write("Inizializzo i modelli e il database vettoriale...")
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5,
             safety_settings=safety_settings,
         )
-        print("GoogleGenAI LLM initialized.")
+        st.write("Google Gemini LLM inizializzato.")
 
         Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
             model_name="BAAI/bge-m3",
             token=HF_TOKEN,
         )
-        print("HuggingFace Embedding model initialized.")
+        st.write("Modello di embedding HuggingFace inizializzato.")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
-        print("Qdrant client initialized.")
+        st.write("Qdrant client inizializzato.")
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
-        print("Qdrant vector store initialized.")
+        st.write("Qdrant Vector Store inizializzato.")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        print("VectorStoreIndex loaded from Qdrant.")
+        st.write("Indice del Vector Store caricato.")
 
         return vector_index
 
