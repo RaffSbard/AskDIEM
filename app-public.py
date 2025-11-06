@@ -260,27 +260,26 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
 
         streaming_response = None
 
-        with st.spinner(ui_texts["thinking_message"]):
+        try:
+            # Tenta di eseguire il chat engine
+            with st.spinner(ui_texts["thinking_message"]):
+                current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
+                chat_engine = st.session_state.chat_engine
+                chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
+                
+                streaming_response = chat_engine.stream_chat(prompt)
 
-            # Formatta la data
-            current_date_str = format_datetime(datetime.datetime.now(), format="EEEE, d MMMM yyyy", locale="it_IT")
+            # Scrivi lo stream
+            final_response_text = st.write_stream(streaming_response.response_gen)
+            source_nodes_for_display = streaming_response.source_nodes
 
-            chat_engine = st.session_state.chat_engine
-            # Aggiorna il system prompt del motore RAG con la data corrente
-            chat_engine._system_prompt = SYSTEM_PROMPT_TEMPLATE.format(current_date=current_date_str)
-            
-            # Avvia lo stream
-            streaming_response = chat_engine.stream_chat(prompt)
-
-
-        # Scrivi lo stream sul frontend e cattura la risposta completa
-        final_response_text = st.write_stream(streaming_response.response_gen)
-        if final_response_text is None:
-            final_response_text = "NIENTEEE"
-        print("Final response text:", final_response_text)
-        st.write(final_response_text)
-
-        source_nodes_for_display = streaming_response.source_nodes
+        except Exception as e:
+            # --- ECCO IL DEBUG ---
+            # Se una qualsiasi delle chiamate API fallisce (Google, Cohere, Qdrant, HF)
+            # l'errore verrà stampato qui invece di dare una risposta vuota.
+            st.error(f"Si è verificato un errore API nascosto:\n\n{e}")
+            final_response_text = "Oops, qualcosa è andato storto."
+        # --- FINE BLOCCO DEBUG ---
 
         # Mostra le fonti
         with st.expander(ui_texts["sources_expander"]):
