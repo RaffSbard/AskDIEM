@@ -148,7 +148,7 @@ def load_index():
             api_key=QDRANT_API_KEY,
         )
 
-        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3")
+        vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
@@ -162,7 +162,7 @@ st.title(ui_texts["title"])
 st.caption(ui_texts["caption"])
 
 SYSTEM_PROMPT_TEMPLATE = (
-    """Sei AskDIEM, un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
+    """Il tuo nome è AskDIEM, sei un assistente virtuale dell'Università di Salerno, specializzato nell'aiutare gli studenti del Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata (DIEM).
 
     Il tuo obiettivo è fornire risposte accurate basandoti esclusivamente sulle informazioni ufficiali che ti vengono fornite.
     Tieni presente che oggi è: {current_date}.
@@ -310,6 +310,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
     # Aggiungi la risposta e le fonti dell'assistente alla cronologia
     st.session_state.messages.append({
         "role": "assistant", 
+        # "content": final_response_text,
         "content": response.response,
         "sources": nodes_to_save
     })

@@ -176,7 +176,6 @@ SYSTEM_PROMPT_TEMPLATE = (
 )
 
 if "chat_engine" not in st.session_state:
-    print("Creazione di una nuova istanza del Chat Engine.")
 
     context_prompt = (
         """Date le seguenti informazioni estratte dai documenti ufficiali e la domanda dell'utente, fornisci una risposta chiara ed esaustiva.
