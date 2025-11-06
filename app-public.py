@@ -114,6 +114,7 @@ st.set_page_config(
 )
 
 # --- INIZIO BLOCCO DEBUG SECRETS ---
+print("Inizio debug delle chiavi API...")
 st.subheader("🐞 Debug Status Chiavi API")
 st.write("Controllo i segreti caricati da st.secrets...")
 try:
@@ -156,26 +157,32 @@ def load_index():
     """Carica i dati, inizializza i modelli e costruisce l'indice."""
 
     with st.spinner(ui_texts["spinner_message"]):
+        print("Inizializzazione del GoogleGenAI LLM...")
         Settings.llm = GoogleGenAI(
             model="gemini-2.5-flash",
             api_key=GOOGLE_API_KEY,
             temperature=0.5,
             safety_settings=safety_settings,
         )
+        print("GoogleGenAI LLM initialized.")
 
         Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
             model_name="BAAI/bge-m3",
             token=HF_TOKEN,
         )
+        print("HuggingFace Embedding model initialized.")
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
             api_key=QDRANT_API_KEY,
         )
+        print("Qdrant client initialized.")
 
         vector_store = QdrantVectorStore(client=qdrant_client, collection_name="diem_chatbot3_v2")
+        print("Qdrant vector store initialized.")
 
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+        print("VectorStoreIndex loaded from Qdrant.")
 
         return vector_index
 
