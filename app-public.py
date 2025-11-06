@@ -184,7 +184,8 @@ if "chat_engine" not in st.session_state:
         {context_str}
 
         Istruzioni per la risposta:
-        - Basa la tua risposta esclusivamente sul contesto fornito.
+        - Se il contesto è presente ED È RILEVANTE per la domanda, basa la tua risposta su di esso.
+        - Se il contesto è vuoto o NON È RILEVANTE per la domanda (ad esempio, se la domanda è un saluto, "come ti chiami?", o una domanda conversazionale generica), rispondi alla domanda usando la tua conoscenza generale e seguendo la tua personalità definita nel system prompt.
         
         - ISTRUZIONE PER I LINK: Se nel contesto è presente una risorsa rilevante (come un PDF di un bando, una graduatoria o una pagina web) che supporta la tua risposta, devi citarla usando il formato Markdown: [Titolo Significativo](URL).
         - Il "Titolo Significativo" dovrebbe essere il titolo del documento (es. 'Bando Collaborazioni studentesche 2024') che trovi nel contesto.
