@@ -113,6 +113,31 @@ st.set_page_config(
     layout="centered",
 )
 
+# --- INIZIO BLOCCO DEBUG SECRETS ---
+st.subheader("🐞 Debug Status Chiavi API")
+st.write("Controllo i segreti caricati da st.secrets...")
+try:
+    st.success(f"GOOGLE_API_KEY: Caricata correttamente")
+    st.success(f"COHERE_API_KEY: Caricata correttamente")
+    st.success(f"QDRANT__API_KEY (doppio underscore): Caricata correttamente")
+    st.success(f"HUGGINGFACE_API_KEY: Caricata correttamente")
+    
+    # Prova a forzare il caricamento
+    _ = st.secrets["GOOGLE_API_KEY"]
+    _ = st.secrets["COHERE_API_KEY"]
+    _ = st.secrets["QDRANT__API_KEY"]
+    _ = st.secrets["HUGGINGFACE_API_KEY"]
+    st.info("Tutte le chiavi sembrano accessibili.")
+
+except KeyError as e:
+    # Se una chiave manca, QUESTO errore apparirà
+    st.error(f"ERRORE CHIAVE MANCANTE: Impossibile trovare la chiave {e} nei secrets di Streamlit!")
+    st.error("Controlla il pannello 'Settings' della tua app su Streamlit Cloud. I nomi devono corrispondere perfettamente.")
+except Exception as e:
+    st.error(f"Errore sconosciuto nel caricamento dei secrets: {e}")
+st.divider()
+# --- FINE BLOCCO DEBUG SECRETS ---
+
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
 QDRANT_API_KEY = st.secrets["QDRANT__API_KEY"]
