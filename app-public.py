@@ -271,7 +271,7 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             
             # Avvia lo stream
             response = chat_engine.chat(prompt)
-            st.write_stream(response.response)
+            st.write(response.response)
 
         # Scrivi lo stream sul frontend e cattura la risposta completa
         # final_response_text = st.write_stream(streaming_response.response_gen)
