@@ -1,0 +1,28 @@
+# --- Requisiti per Streamlit (app-docker.py) ---
+streamlit==1.49.1
+babel==2.17.0
+
+# --- Requisiti per il Crawler (update.py) ---
+requests==2.32.4
+beautifulsoup4==4.13.4
+html2text==2024.2.26
+pypdf==5.8.0
+selenium==4.34.2
+webdriver-manager==4.0.2
+tqdm==4.67.1
+
+# --- Requisiti Comuni (LlamaIndex, Qdrant, ecc.) ---
+python-dotenv==1.1.1
+qdrant-client==1.15.1
+llama-index-core==0.14.7
+llama-index-llms-google-genai==0.7.1
+llama-index-embeddings-huggingface==0.6.1
+llama-index-embeddings-huggingface-api==0.4.1
+llama-index-vector-stores-qdrant==0.8.6
+llama-index-postprocessor-cohere-rerank==0.5.1
+llama-index-utils-huggingface==0.4.1
+google-generativeai
+
+# --- Dipendenze per Embedding (necessarie per HuggingFaceEmbedding) ---
+sentence-transformers
+torch==2.9.0

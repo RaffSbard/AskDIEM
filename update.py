@@ -31,7 +31,7 @@ from llama_index.core.schema import Document
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
 
 # Import per Qdrant
 from llama_index.core import VectorStoreIndex, StorageContext, Settings
@@ -45,9 +45,8 @@ load_dotenv()
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
 os.environ["HUGGINGFACE_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
-os.environ["QDRANT__API_KEY"] = os.getenv("QDRANT__API_KEY")
 
-Settings.embed_model = HuggingFaceEmbedding(
+Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
     model_name="BAAI/bge-m3", 
     token=os.getenv("HUGGINGFACE_API_KEY")
 )
@@ -64,8 +63,13 @@ DOWNLOADED_PDF_URLS_FILE = "urls_lists/urls_pdf_downloaded_list.txt"
 NODES_OUTPUT_FILE = "nodes/nodes_metadata_sentence_x16.pkl"
 NEW_NODES_OUTPUT_FILE = "nodes/nodes_metadata_update.pkl"
 
-QDRANT_URL = "http://localhost:6333"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant_db:6333")
 QDRANT_COLLECTION_NAME = "diem_chatbot3_v2"
+
+# Percorso DELLO STESSO FILE, ma visto DALL'INTERNO del container Qdrant
+SNAPSHOT_FILE_PATH_IN_CONTAINER = "/qdrant/snapshots/migration_snapshot.snapshot"
+# Percorso dello snapshot visto dall'app (per os.path.exists)
+SNAPSHOT_FILE_PATH_IN_APP = "/app/snapshots/migration_snapshot.snapshot"
 
 # Configurazione per l'estrazione metadati
 MIN_DELAY_SECONDS = 1
@@ -79,6 +83,63 @@ HEADERS = {
 # ==============================================================================
 # --- SEZIONE 1: FUNZIONI DI SUPPORTO ---
 # ==============================================================================
+
+def restore_snapshot_if_needed():
+    """
+    Controlla se il DB Qdrant locale è vuoto. Se lo è,
+    cerca uno snapshot e lo ripristina.
+    """
+    print("Controllo dello stato del database Qdrant locale...")
+    
+    # Attesa che Qdrant sia online
+    client_local = None
+    max_retries = 10
+    for i in range(max_retries):
+        try:
+            client_local = QdrantClient(url=QDRANT_URL, timeout=300)
+            client_local.get_collections() # Prova una chiamata
+            print("Server Qdrant RILEVATO.")
+            break
+        except Exception:
+            print(f"Server Qdrant non ancora pronto... Tento tra 5s (Tentativo {i+1}/{max_retries})")
+            time.sleep(5)
+    
+    if not client_local:
+        print("ERRORE CRITICO: Impossibile connettersi al server Qdrant locale.")
+        return
+
+    try:
+        # 1. Controlla se la collezione esiste
+        collections = client_local.get_collections().collections
+        collection_exists = any(c.name == QDRANT_COLLECTION_NAME for c in collections)
+        
+        if collection_exists:
+            print(f"La collezione '{QDRANT_COLLECTION_NAME}' esiste già. Nessun ripristino necessario.")
+            return
+
+        print(f"La collezione '{QDRANT_COLLECTION_NAME}' non esiste. Tentativo di ripristino da snapshot...")
+
+        # 2. Controlla se il file snapshot esiste nel container
+        if not os.path.exists(SNAPSHOT_FILE_PATH_IN_APP):
+            print(f"ATTENZIONE: Snapshot '{SNAPSHOT_FILE_PATH_IN_APP}' non trovato. Il database è vuoto.")
+            print("Lo script di aggiornamento ora eseguirà un crawling completo da zero.")
+            return
+
+        # 3. Esegui il ripristino
+        print(f"Snapshot trovato. Ripristino di '{QDRANT_COLLECTION_NAME}' in corso...")
+        
+        location_uri = f"file://{SNAPSHOT_FILE_PATH_IN_CONTAINER}"
+        
+        client_local.recover_snapshot(
+            collection_name=QDRANT_COLLECTION_NAME,
+            location=location_uri,
+            wait=True
+        )
+        print("Ripristino da snapshot completato con successo.")
+
+    except Exception as e:
+        print(f"ERRORE durante il ripristino automatico: {e}")
+        print("Il database potrebbe essere vuoto. Il crawler tenterà un'indicizzazione completa.")
 
 def save_to_pickle(data, filepath):
     """Salva qualsiasi oggetto Python in un file pickle."""
@@ -749,6 +810,9 @@ def index_nodes_to_qdrant(nodes_to_index, urls_to_delete):
 def main_workflow():
     """ Esegue il flusso completo di controllo aggiornamenti e crawling. """
     print(f"--- AVVIO PROCESSO DI AGGIORNAMENTO ({time.ctime()}) ---")
+
+    # 0. Ripristina lo snapshot se necessario
+    restore_snapshot_if_needed()
     
     # 1. Carica la lista master di URL da monitorare
     try:
