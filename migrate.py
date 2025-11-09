@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- 1. CONFIGURAZIONE ---
-QDRANT_CLOUD_URL = "https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333"
+QDRANT_CLOUD_URL = "https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333" # Da cambiare con il tuo URL Qdrant Cloud
 QDRANT_CLOUD_API_KEY = os.getenv("QDRANT__API_KEY")
 COLLECTION_NAME = "diem_chatbot3_v2"
 

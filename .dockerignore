@@ -1,0 +1,34 @@
+# Ambiente virtuale
+.venv/
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Configurazione IDE/Git
+.vscode/
+.git/
+.gitignore
+.devcontainer/
+
+# Vengono passati tramite 'environment:' nel docker-compose
+.env
+
+# File di preparazione e migrazione non necessari per l'esecuzione
+*.ipynb
+migrate.py
+
+# Documentazione
+README.md
+
+# Volumi, dati e cache
+# Queste cartelle sono GESTITE DAI VOLUMI nel docker-compose,
+# non devono essere COPIATE nell'immagine.
+data/
+nodes/
+urls_lists/
+documents/
+results/
+
+# Questa cartella è un volume gestito di Qdrant, NON fa parte del build
+qdrant_storage/
