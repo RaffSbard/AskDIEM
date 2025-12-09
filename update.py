@@ -2,6 +2,9 @@
 # --- SEZIONE 0: IMPORTAZIONI E CONFIGURAZIONE GLOBALE ---
 # ==============================================================================
 import requests
+import urllib3
+# Disabilita i warning di sicurezza per connessioni non verificate
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from bs4 import BeautifulSoup
 import time
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode
@@ -314,7 +317,7 @@ def check_for_updates_robust(urls_to_check, last_state):
             request_headers["If-Modified-Since"] = previous_data["last_modified"]
 
         try:
-            with requests.get(url, headers=request_headers, timeout=10, allow_redirects=True, stream=True) as response:
+            with requests.get(url, headers=request_headers, timeout=10, allow_redirects=True, stream=True, verify=False) as response:
                 time.sleep(0.5)
 
                 # 1. CONTROLLO EFFICIENTE TRAMITE HEADER
@@ -446,7 +449,7 @@ def run_crawler(start_urls, pre_visited_urls):
                     page_content = None
             else:
                 # Altrimenti, usiamo 'requests'
-                response = requests.get(current_url, timeout=10)
+                response = requests.get(current_url, timeout=10, verify=False)
                 if response.status_code == 200 and 'text/html' in response.headers.get('Content-Type', ''):
                     page_content = response.content
                 
@@ -580,7 +583,7 @@ def process_pdfs(url_list_file, url_list_downloaded_file):
     for url in pdfs_to_process:
         try:
             print(f"-> Processando in memoria: {url}")
-            response = requests.get(url, timeout=30, headers=headers)
+            response = requests.get(url, timeout=30, headers=headers, verify=False)
             response.raise_for_status() # Controlla errori HTTP
 
             # Assicurati che sia un PDF prima di continuare

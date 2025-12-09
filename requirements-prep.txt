@@ -20,6 +20,7 @@ html2text==2024.2.26
 
 # Per MCER.py
 requests==2.32.4
+certifi
 selenium==4.34.2
 webdriver-manager==4.0.2
 

@@ -24,9 +24,9 @@ README.md
 # Volumi, dati e cache
 # Queste cartelle sono GESTITE DAI VOLUMI nel docker-compose,
 # non devono essere COPIATE nell'immagine.
-data/
-nodes/
-urls_lists/
+# data/
+# nodes/
+# urls_lists/
 documents/
 results/
 

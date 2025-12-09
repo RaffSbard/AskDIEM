@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
+    ca-certificates \
     # Pulisci la cache per ridurre la dimensione dell'immagine
     && rm -rf /var/lib/apt/lists/*
 
@@ -21,13 +22,27 @@ RUN pip install --no-cache-dir -r requirements-docker.txt
 # Copia tutto il resto del codice sorgente nell'immagine
 COPY . .
 
-# Crea i file di log/stato vuoti se non esistono (necessario per il volume)
-RUN mkdir -p data nodes urls_lists
-RUN touch data/page_update_state.json
-RUN touch urls_lists/urls_html_master_list.txt
-RUN touch urls_lists/urls_pdf_master_list.txt
-RUN touch urls_lists/urls_pdf_downloaded_list.txt
-RUN touch nodes/nodes_final_enriched.pkl
+# # Crea i file di log/stato vuoti se non esistono (necessario per il volume)
+# RUN mkdir -p data nodes urls_lists
+# RUN touch data/page_update_state.json
+# RUN touch urls_lists/urls_html_master_list.txt
+# RUN touch urls_lists/urls_pdf_master_list.txt
+# RUN touch urls_lists/urls_pdf_downloaded_list.txt
+# RUN touch nodes/nodes_final_enriched.pkl
+
+# --- MODIFICA PER PORTAINER ---
+# Creiamo una cartella per i dati iniziali (Seed Data)
+RUN mkdir -p /app/init_data
+
+# Copiamo i dati attuali dentro questa cartella di "backup" nell'immagine
+COPY data/ /app/init_data/data/
+COPY nodes/ /app/init_data/nodes/
+COPY urls_lists/ /app/init_data/urls_lists/
+COPY qdrant_snapshots/ /app/init_data/snapshots/
+
+# Creiamo le cartelle di destinazione (che verranno sovrascritte dai volumi di Portainer)
+RUN mkdir -p /app/data /app/nodes /app/urls_lists /app/snapshots
+# ------------------------------
 
 # Crea ed rendi eseguibile lo script di avvio
 COPY entrypoint.sh .

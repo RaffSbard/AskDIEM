@@ -6,7 +6,7 @@ from llama_index.core import (
     Settings
 )
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from qdrant_client import QdrantClient
 from llama_index.core.memory import ChatMemoryBuffer
@@ -136,12 +136,13 @@ def load_index():
             api_key=os.environ['GOOGLE_API_KEY'],
             temperature=0.5,
             safety_settings=safety_settings,
+            max_retries=100,
         )
 
-        Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
+        Settings.embed_model = HuggingFaceEmbedding(
             model_name="BAAI/bge-m3",
-            token=os.environ['HF_TOKEN'],
         )
+
 
         qdrant_client = QdrantClient(
             url="https://e542824d-6590-4005-91db-6dd34bf8f471.eu-west-2-0.aws.cloud.qdrant.io:6333", 
@@ -168,10 +169,10 @@ SYSTEM_PROMPT_TEMPLATE = (
     Tieni presente che oggi è: {current_date}.
 
     REGOLE GENERALI:
-    - *IMPORTANTE*: Se la domanda ti viene posta in inglese rispondi in inglese, a prescindere dalla lingua dei messaggi precedenti o da quella del contesto fornito.
+    - *IMPORTANTE*: Se la domanda ti viene posta in inglese rispondi INTERAMENTE in inglese, a prescindere dalla lingua dei messaggi precedenti o da quella del contesto fornito.
     - A meno che nella domanda non venga specificato un anno o una data in particolare, rispondi sempre tenendo presente la data di oggi.
     - Se nomini un evento, adegua i tempi verbali in base alla data attuale.
-    - Se non disponi delle informazioni necessarie per rispondere a una domanda, dichiara chiaramente: "Non dispongo delle informazioni necessarie per rispondere a questa domanda."
+    - Se non disponi delle informazioni necessarie per rispondere a una domanda, dichiaralo chiaramente.
     - Non inventare mai informazioni, contatti, date o procedure. La tua priorità è l'accuratezza."""
 )
 
@@ -271,11 +272,14 @@ if prompt := st.chat_input(ui_texts["chat_input_placeholder"]):
             
             # Avvia lo stream
             streaming_response = chat_engine.stream_chat(prompt)
+            # response = chat_engine.chat(prompt)
+            # st.write(response.response)
             
         # Scrivi lo stream sul frontend e cattura la risposta completa
         final_response_text = st.write_stream(streaming_response.response_gen)
         
         source_nodes_for_display = streaming_response.source_nodes
+        # source_nodes_for_display = response.source_nodes
 
         # Mostra le fonti
         with st.expander(ui_texts["sources_expander"]):

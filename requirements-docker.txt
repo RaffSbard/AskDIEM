@@ -4,6 +4,7 @@ babel==2.17.0
 
 # --- Requisiti per il Crawler (update.py) ---
 requests==2.32.4
+certifi
 beautifulsoup4==4.13.4
 html2text==2024.2.26
 pypdf==5.8.0
